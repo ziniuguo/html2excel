@@ -1,0 +1,90 @@
+"""
+Parse through html files to count occurences of key phrases and export as excel file
+
+Author: JTYH
+"""
+
+from bs4 import BeautifulSoup
+import pandas as pd
+import numpy as np
+import os
+
+
+def htmlCounterToExcel(fileList : list, keyPhrases : list):
+
+    writer = pd.ExcelWriter("/Users/ergou/Desktop/SGFC/SCMP/scmp_summary.xlsx", engine = 'xlsxwriter')
+
+    for filePath in fileList:
+        soup = BeautifulSoup(open(filePath), 'html.parser')
+        dataFrame = []
+        articleVector = []
+        articleCounter = 0
+        wordCount = 0
+        for element in soup.find_all():
+            # p7 is the article title class, which implies the start of an article
+            if element.name == "p" and "class" in element.attrs and "p7" in element["class"]:
+                # if it's not the first article, process the previous completed article vector and append it to the data frame list
+                if articleCounter != 0:
+                    # slice out the text body and make it into one element in the article vector 
+                    textBody = articleVector[4:]
+                    fullText = ''.join(textBody)
+                    articleVector = articleVector[:4]
+                    articleVector.append(fullText)
+                    dataFrame.append(articleVector)
+                    articleVector = []
+                articleVector.append(element.text.strip())
+                articleCounter += 1
+            # p8 is the author
+            elif element.name == "p" and "class" in element.attrs and "p8" in element["class"]:
+                articleVector.append(element.text.strip())
+            # p6 contains many information, here to extract the published date
+            elif element.name == "p" and "class" in element.attrs and "p6" in element["class"]:
+                elementText = element.text.strip()
+                elementText.split(" ")
+                # use this condition to check whether the first/last part of text is numeric or not (wordcount/year)
+                if len(elementText) > 1:
+                    if elementText[-1] == 'words':
+                        articleVector.append(elementText[0])
+                    elif elementText[-1].isnumeric():
+                        articleVector.append(''.join(elementText))
+                    else: next
+                    
+            # p9 is the text body
+            elif element.name == "p" and "class" in element.attrs and "p9" in element["class"]:
+                articleVector.append(element.text.strip())
+        
+        # adding the column names and transform the 2D list into a data frame
+        transformDataFrame = pd.DataFrame(np.array(dataFrame),
+                                        columns=['Title', 'Author', 'Word Count', 'Publish Date', 'Text'])
+        
+        # counting occurences of each of the phrase in the text bodies
+        #for phrase in keyPhrases:
+        #    transformDataFrame[phrase] = transformDataFrame['Text'].str.count(phrase)
+        #    frColName = phrase + ' Frequency Ratio'
+        #    wordCntV = transformDataFrame['Word Count']
+        #    transformDataFrame[frColName] = transformDataFrame[phrase].astype(int) / wordCntV.astype(int)
+
+        #sheetName = filePath.split("/")[-1].split(".")[-2]
+        #transformDataFrame.to_excel(writer, sheet_name = sheetName)
+
+        return transformDataFrame
+    
+    writer.close()
+        
+
+if __name__ == "__main__":
+    scmp_filePaths = ['/Users/ergou/Desktop/SGFC/DCS/Archive/SCMP/scmp_capital_flow_1.html',
+                      '/Users/ergou/Desktop/SGFC/DCS/Archive/SCMP/scmp_capital_flow_2.html',
+                      '/Users/ergou/Desktop/SGFC/DCS/Archive/SCMP/scmp_capital_inflow_1.html',
+                      '/Users/ergou/Desktop/SGFC/DCS/Archive/SCMP/scmp_capital_inflow_2.html',
+                      '/Users/ergou/Desktop/SGFC/DCS/Archive/SCMP/scmp_dual_class_share_1.html',
+                      '/Users/ergou/Desktop/SGFC/DCS/Archive/SCMP/scmp_dual_class_share_2.html',
+                      '/Users/ergou/Desktop/SGFC/DCS/Archive/SCMP/scmp_dual_class_structure.html',
+                      '/Users/ergou/Desktop/SGFC/DCS/Archive/SCMP/scmp_weighted_voting_rights.html']
+    targetPhrases = ["dual", "class", "share", "shares", "weighted", "voting", "right", "rights", "structure", "capital", "inflow", "outflow"]
+    print(htmlCounterToExcel(scmp_filePaths, targetPhrases).head())
+    
+
+
+
+

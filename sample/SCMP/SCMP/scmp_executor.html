@@ -1,0 +1,118 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2299.6">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px 'Helvetica Light'}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px 'Helvetica Light'; min-height: 14.0px}
+  </style>
+</head>
+<body>
+<p class="p1">"""</p>
+<p class="p1">Parse through SCMP webarchive/html files to count occurences of key phrases and export as excel file</p>
+<p class="p2"><br></p>
+<p class="p1">Author: JTYH</p>
+<p class="p1">"""</p>
+<p class="p2"><br></p>
+<p class="p1">import os</p>
+<p class="p1">from bs4 import BeautifulSoup</p>
+<p class="p1">import pandas as pd</p>
+<p class="p1">import numpy as np</p>
+<p class="p2"><br></p>
+<p class="p1">"""</p>
+<p class="p1">3. Main Processing Operations</p>
+<p class="p2"><br></p>
+<p class="p1">Note that this is only valid for the articles retrieved from Factiva database</p>
+<p class="p1">"""</p>
+<p class="p1">def htmlParser(fileList : list):</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>for filePath in fileList:</p>
+<p class="p1"><span class="Apple-converted-space">        </span># setup global varibles</p>
+<p class="p1"><span class="Apple-converted-space">        </span>soup = BeautifulSoup(open(filePath), 'html.parser')</p>
+<p class="p1"><span class="Apple-converted-space">        </span>dataFrame = []</p>
+<p class="p1"><span class="Apple-converted-space">        </span>articleVector = []</p>
+<p class="p1"><span class="Apple-converted-space">        </span>articleCounter = 1</p>
+<p class="p1"><span class="Apple-converted-space">        </span>tempp7 = None</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>for element in soup.find_all():</p>
+<p class="p1"><span class="Apple-converted-space">            </span># class &lt;p6&gt; is the article title, which is also the start of an article</p>
+<p class="p1"><span class="Apple-converted-space">            </span>if element.name == "p" and "class" in element.attrs and "p6" in element["class"]:</p>
+<p class="p1"><span class="Apple-converted-space">                </span># if it's not the first article, process the previous completed article vector and append it to the data frame list</p>
+<p class="p1"><span class="Apple-converted-space">                </span>if articleCounter != 1:</p>
+<p class="p1"><span class="Apple-converted-space">                    </span># slice out the text body and make it into one element in the article vector<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">                    </span>textBody = articleVector[5:]</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>fullText = ''.join(textBody)</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>articleVector = articleVector[:5]</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>articleVector.append(fullText)</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>dataFrame.append(articleVector)</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>articleVector = []</p>
+<p class="p1"><span class="Apple-converted-space">                </span>else:</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>articleVector.append(articleCounter) # 1st item in articleVector is article number</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>articleTitle = element.text.strip()</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>articleVector.append(articleTitle) # 2nd item in articleVector is title</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>articleCounter += 1</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span># class &lt;p7&gt; contains information including (sequentially) word count, publish date and publisher</p>
+<p class="p1"><span class="Apple-converted-space">            </span>if element.name == "p" and "class" in element.attrs and "p7" in element["class"]:</p>
+<p class="p1"><span class="Apple-converted-space">                </span>tempp7 = element.text.strip()</p>
+<p class="p1"><span class="Apple-converted-space">                </span>tempp7List = tempp7.split(" ")</p>
+<p class="p1"><span class="Apple-converted-space">                </span>if tempp7List[-1] == 'words':</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>articleVector.append(int(tempp7List[0])) # 3rd item in articleVector is word count in Int</p>
+<p class="p1"><span class="Apple-converted-space">                </span>elif tempp7List[-1].isnumeric():</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>articleVector.append(tempp7) # 4th item in articleVector is publish date</p>
+<p class="p1"><span class="Apple-converted-space">                </span>elif tempp7 == "scmp.com":</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>articleVector.append('SCMP') # 5th item in articleVector is publisher (SCMP)</p>
+<p class="p1"><span class="Apple-converted-space">                </span>elif tempp7 == "The Standard":</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>articleVector.append('The Standard') # 5th item in articleVector is publisher (The Standard)</p>
+<p class="p1"><span class="Apple-converted-space">                </span>else: next</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span># class &lt;p8&gt; contains text body (in different paragraphs for seperated classes "p8"), and they are all in &gt;=6 items</p>
+<p class="p1"><span class="Apple-converted-space">            </span>elif element.name == "p" and "class" in element.attrs and "p8" in element["class"]:</p>
+<p class="p1"><span class="Apple-converted-space">                </span>articleVector.append(element.text.strip())</p>
+<p class="p2"><span class="Apple-converted-space">        </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span># adding the column names and transform the 2D list into a data frame</p>
+<p class="p1"><span class="Apple-converted-space">        </span>transformDataFrame = pd.DataFrame(np.array(dataFrame),</p>
+<p class="p1"><span class="Apple-converted-space">                                        </span>columns=['Number', 'Headline', 'Word Count', 'Date', 'Publisher', 'Text'])</p>
+<p class="p2"><span class="Apple-converted-space">        </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>return transformDataFrame</p>
+<p class="p2"><span class="Apple-converted-space">        </span></p>
+<p class="p2"><br></p>
+<p class="p1">"""</p>
+<p class="p1">test for function 3</p>
+<p class="p1">"""</p>
+<p class="p1">fileAddr = '/Users/ergou/Desktop/SGFC/DCS/Articles/dual-class-1.html'</p>
+<p class="p1">print(htmlParser([fileAddr]))</p>
+<p class="p2"><br></p>
+<p class="p1">"""</p>
+<p class="p1">4. DataFrame to Excel</p>
+<p class="p1">"""</p>
+<p class="p1">def DFToExcel(df, keyPhrases : str, excelFile : str):</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>writer = pd.ExcelWriter(excelFile, engine = 'xlsxwriter')</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span># counting occurences of each of the phrase in the text bodies</p>
+<p class="p1"><span class="Apple-converted-space">    </span>for phrase in keyPhrases:</p>
+<p class="p1"><span class="Apple-converted-space">        </span>df[phrase] = df['Text'].str.count(phrase)</p>
+<p class="p1"><span class="Apple-converted-space">    </span>sheetName = filePath.split("/")[-1].split(".")[-2]</p>
+<p class="p1"><span class="Apple-converted-space">    </span>df.to_excel(writer, sheet_name = sheetName)</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>writer.close()</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p1">if __name__ == "__main__":</p>
+<p class="p1"><span class="Apple-converted-space">    </span>htmlDirectory = ""</p>
+<p class="p1"><span class="Apple-converted-space">    </span>targetPhrases = ["dual", "class", "share", "shares", "weighted", "voting", "right", "rights", "structure", "capital", "inflow", "outflow"]</p>
+<p class="p1"><span class="Apple-converted-space">    </span>htmlCounterToExcel(htmlDirectory, targetPhrases)</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+</body>
+</html>

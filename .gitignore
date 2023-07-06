@@ -1,8 +1,3 @@
-givenPy/
-output/
-sample/
-multipub_articles/
-multipub_articles_summary.xlsx
 
 target/
 !.mvn/wrapper/maven-wrapper.jar
